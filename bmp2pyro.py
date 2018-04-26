@@ -6,6 +6,9 @@
 '''
 
 import os
+import sys
+import getopt
+import time
 import logging
 from PIL import Image
     
@@ -16,9 +19,9 @@ class BmpToPyro():
     RES_X = 0.1 # mm
     RES_Y = 0.1 # mm    
     
-    def __init__(self, fName='Gray_scale.bmp'):
+    def __init__(self, inFileName='', outFileName=''):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.img = Image.open(fName)  
+        self.img = Image.open(inFileName)  
         self.pix = self.img.load()
         self.sizeX, self.sizeY = self.img.size
         self.aspectRatio = self.sizeX / self.sizeY
@@ -33,7 +36,7 @@ class BmpToPyro():
                 
         self.gcodeLines = []
         
-        self.gcodeOutputFile = 'test.nc'
+        self.gcodeOutputFile = outFileName
         try:
             os.remove(self.gcodeOutputFile)
         except OSError:
@@ -93,11 +96,40 @@ class BmpToPyro():
             for line in self.gcodeLines:
                 f.write(line + '\n')
             
-if __name__ == '__main__':
-    logging.basicConfig(level = logging.DEBUG)
-    b2f = BmpToPyro()
+def main(argv):
+    inputFile = ''
+    outputFile = ''
+    helpMsg = 'bmp2pyro.py -i <inputFile.bmp> -o <outputFile.nc>'    
+    try:
+        opts, args = getopt.getopt(argv,"hi:o:",["iFile=","oFile="])
+    except getopt.GetoptError:
+        print(helpMsg)
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print(helpMsg)
+            sys.exit()
+        elif opt in ("-i", "--ifile"):
+            inputFile = arg
+        elif opt in ("-o", "--ofile"):
+            outputFile = arg
+    
+    if inputFile == '':
+        print('Please specify input file name!')
+        print(helpMsg)
+        sys.exit(2)
+    if outputFile == '':
+        outputFile = inputFile.split('.')[0] + '.nc'
+        
+    startedAt = time.time()
+    b2f = BmpToPyro(inputFile, outputFile)
     # b2f.print_pixels_RGB()
-    # b2f.print_feed_rates()
+    # b2f.print_feed_rates()    
     b2f.print_gcode_line()
     b2f.writeToFile()
+    print('Conversion took: %s secs' % str(time.time() - startedAt))
     print('Ready!')
+
+if __name__ == '__main__':
+    logging.basicConfig(level = logging.DEBUG)
+    main(sys.argv[1:])
