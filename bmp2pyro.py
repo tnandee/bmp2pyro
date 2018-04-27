@@ -10,6 +10,7 @@ import sys
 import getopt
 import time
 import logging
+import datetime
 from PIL import Image
     
 class BmpToPyro():
@@ -36,6 +37,7 @@ class BmpToPyro():
                 
         self.gcodeLines = []
         
+        self.bmpInputFile = inFileName 
         self.gcodeOutputFile = outFileName
         try:
             os.remove(self.gcodeOutputFile)
@@ -70,6 +72,7 @@ class BmpToPyro():
             print()
             
     def print_gcode_line(self):
+        print('Processing file: %s' % self.bmpInputFile)
         lastFeedRate = 0
         for y in range(0, self.sizeY):
             yAbsPos = int(y * self.scaleY * 100) / 100.0
@@ -99,9 +102,23 @@ class BmpToPyro():
         return ret
     
     def writeToFile(self):
+        print('Writing to file: %s' % self.gcodeOutputFile)
         with open(self.gcodeOutputFile, 'a') as f:
             for line in self.gcodeLines:
                 f.write(line + '\n')
+                
+    def print_generator_info(self):
+        def print_comment(txt):
+            self.gcodeLines.append('( - %s - )' % txt)
+            
+        print_comment('%s' % self.__class__.__name__)
+        now = datetime.datetime.now()
+        print_comment('%s' % now.strftime("%Y-%m-%d %H:%M:%S"))
+        print_comment('%s' % self.gcodeOutputFile)
+        print_comment('Feedrates: Black:%s, White:%s, White+:%s' % (self.FEED_RATE_BLACK, self.FEED_RATE_WHITE, self.FEED_RATE_WHITE_PLUS))
+        print_comment('Rasters: X: %f, Y:%f' % (self.stepX, self.stepY))
+        print_comment('Physical dimensions: W: %f, H:%f' % (self.dimX, self.dimY))
+        
             
 def main(argv):
     inputFile = ''
@@ -132,6 +149,7 @@ def main(argv):
     b2f = BmpToPyro(inputFile, outputFile)
     # b2f.print_pixels_RGB()
     # b2f.print_feed_rates()    
+    b2f.print_generator_info()    
     b2f.print_gcode_line()
     b2f.writeToFile()
     print('%s lines of gcode were written in %.2f secs' % (len(b2f.gcodeLines), (time.time() - startedAt)))
