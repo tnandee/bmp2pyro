@@ -57,11 +57,18 @@ class BmpToPyro():
             gcode = 'G01 %s%s' % (xy, absPos)
         else:
             gcode = 'G01 %s%s F%s' % (xy, absPos, feedRate)
-        print(gcode)
+        self.logger.debug(gcode)
         
         self.gcodeLines.append(gcode)
 
-                       
+    def update_progressbar(self, percent):
+        length = 25
+        actual = int(percent * length)
+        percentStr =  '%s%%' % (int(percent * 100))  
+        print('\r[' + '|'*actual + ' '*(length-actual) + '] ' + percentStr, end='', flush=True)
+        if percent == 1:
+            print()
+            
     def print_gcode_line(self):
         lastFeedRate = 0
         for y in range(0, self.sizeY):
@@ -75,7 +82,7 @@ class BmpToPyro():
                     self.print_gcode('X', xAbsPos, feedRate)
             self.print_gcode('X', xAbsPos, feedRate)
             self.print_gcode('X', 0, self.FEED_RATE_WHITE_PLUS)
-    
+            self.update_progressbar(y / (self.sizeY-1))
         
     def get_feed_rate_at_pixel(self, x, y):
         dot = self.pix[x,y] 
@@ -127,9 +134,9 @@ def main(argv):
     # b2f.print_feed_rates()    
     b2f.print_gcode_line()
     b2f.writeToFile()
-    print('Conversion took: %s secs' % str(time.time() - startedAt))
+    print('%s lines of gcode were written in %.2f secs' % (len(b2f.gcodeLines), (time.time() - startedAt)))
     print('Ready!')
 
 if __name__ == '__main__':
-    logging.basicConfig(level = logging.DEBUG)
+    logging.basicConfig(level = logging.ERROR)
     main(sys.argv[1:])
